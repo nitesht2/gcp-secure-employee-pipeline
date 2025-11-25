@@ -27,5 +27,5 @@
 - **Cost** — ~$0.50 per daily run on Data Fusion
 
 ## Project Structure
-dags/employee_secure_daily_pipeline.py     → Airflow orchestration
-dags/scripts/extract.py                    → Data generation + GCS upload
+- dags/employee_secure_daily_pipeline.py     → Airflow orchestration
+- dags/scripts/extract.py                    → Data generation + GCS upload
