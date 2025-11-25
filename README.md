@@ -1,4 +1,4 @@
-# Secure Employee Analytics Pipeline on Google Cloud (GCP)
+# Google Cloud(GCP) Secured Employee Data Pipeline
 
 **Fully automated, PII-protected data pipeline** that extracts sensitive employee data, applies compliance-grade security (salary masking + SHA-256 password hashing), loads into BigQuery, and delivers insights via Tableau.
 
