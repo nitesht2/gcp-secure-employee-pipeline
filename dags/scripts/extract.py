@@ -43,7 +43,7 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     print(f'File {source_file_name} uploaded to {destination_blob_name} in {bucket_name}.')
 
 # Set your GCS bucket name and destination file name
-bucket_name = 'bkt-employee-data'
+bucket_name = 'employee_data_project11182025'
 source_file_name = 'employee_data.csv'
 destination_blob_name = 'employee_data.csv'
 
