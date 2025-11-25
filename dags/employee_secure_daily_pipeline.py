@@ -31,7 +31,7 @@ with DAG(
     start_pipeline = CloudDataFusionStartPipelineOperator(
         task_id='start_datafusion_pipeline',
         location="us-west1",
-        pipeline_name="etl-pipeline",
+        pipeline_name="ETL Data Pipeline",
         instance_name="datafusion-dev",
         pipeline_timeout=900,
         success_states=[PipelineStates.COMPLETED],
