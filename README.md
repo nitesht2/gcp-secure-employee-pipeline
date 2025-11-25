@@ -3,7 +3,8 @@
 
 **Fully automated, PII-protected data pipeline** that extracts sensitive employee data, applies compliance-grade security (salary masking + SHA-256 password hashing), loads into BigQuery, and delivers insights via Tableau.
 
-![Architecture](assets/architecture.png)
+![Architecture]<img width="675" height="431" alt="Screenshot 2025-11-24 at 5 39 45 PM" src="https://github.com/user-attachments/assets/567f03dd-2722-42a2-8b3c-db4bcbfac2d6" />
+
 
 ## Tech Stack
 - Python + Faker (data generation)
