@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="GCP Secure Employee Pipeline" width="100%">
+</p>
+
 # GCP Secure Employee Data Pipeline
 
 **A production-grade, PII-protected data pipeline on Google Cloud.** It generates sensitive employee records, applies compliance-grade protection (salary masking + SHA-256 password hashing) in Cloud Data Fusion, lands the result in BigQuery, and serves it through Tableau — orchestrated end-to-end by Airflow on a daily schedule.
