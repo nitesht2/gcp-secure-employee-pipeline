@@ -4,7 +4,7 @@
 
 # GCP Secure Employee Data Pipeline
 
-**A production-grade, PII-protected data pipeline on Google Cloud.** It generates sensitive employee records, applies compliance-grade protection (salary masking + SHA-256 password hashing) in Cloud Data Fusion, lands the result in BigQuery, and serves it through Tableau — orchestrated end-to-end by Airflow on a daily schedule.
+**A reference data-engineering pipeline on Google Cloud that demonstrates PII protection.** It generates synthetic employee records, masks salaries and hashes passwords *before* they reach the warehouse, lands the protected result in BigQuery, and serves it through Tableau — orchestrated end-to-end by Airflow on a daily schedule.
 
 ![GCP](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat&logo=googlecloud&logoColor=white)
 ![BigQuery](https://img.shields.io/badge/BigQuery-669DF6?style=flat&logo=googlebigquery&logoColor=white)
@@ -30,24 +30,41 @@ flowchart LR
     O -.triggers.-> C
 ```
 
-**Flow:** Airflow runs `extract.py` to generate 100 synthetic employee records and upload them to GCS → Airflow triggers the Cloud Data Fusion pipeline, which masks salaries and SHA-256-hashes passwords → clean, protected data lands in BigQuery → Tableau reads BigQuery for interactive reporting. The DAG enforces task dependencies (`extract → transform`) so the transform never runs on stale data.
+**Flow:** Airflow runs `extract.py` to generate synthetic employee records and upload them to GCS → Airflow triggers the Cloud Data Fusion pipeline, which masks salaries and SHA-256-hashes passwords → the protected data lands in BigQuery → Tableau reads BigQuery for reporting. The DAG sequences `extract → transform` so the transform never runs on stale data.
 
-## Key features
+## What it demonstrates
 
-- **PII protection by design** — salaries masked (`xxxxx`), passwords cryptographically hashed (SHA-256); raw sensitive values never reach the warehouse
-- **Daily automation** — `@daily` Airflow schedule on Cloud Composer, no manual steps
-- **Dependency-managed orchestration** — `extract_data >> start_datafusion_pipeline`
-- **100% GCP-native** — GCS, Cloud Data Fusion, BigQuery, Cloud Composer, Tableau
-- **Scales without code changes** — validated at 100 records, ready for 100K+
+- **A PII-protection pattern** — salary masking (`xxxxx`) + one-way password hashing, applied *before* data is warehoused
+- **Orchestration** — a daily Airflow schedule on Cloud Composer with task dependencies, retries, and failure alerts
+- **GCP-native stack** — GCS, Cloud Data Fusion, BigQuery, Cloud Composer, Tableau
+- **Reviewable security logic** — the no-code Data Fusion transform is reproduced as testable Python (`secure_transform.py`) with unit tests
+- **Configurable, not hard-coded** — record count, GCP region, Data Fusion instance/pipeline, and an optional HMAC pepper are all environment-driven
 
-## Business impact
+## The PII protection, made explicit
 
-| Metric | Result |
-|--------|--------|
-| Manual data handling | Eliminated (100% automated) |
-| PII exposure | Zero — salary + passwords protected before warehousing |
-| Cost per daily run | ~$0.50 (Cloud Data Fusion) |
-| Scalability | 100 → 100K+ records, no code changes |
+The masking + hashing runs no-code inside Cloud Data Fusion in production.
+[`transforms/secure_transform.py`](transforms/secure_transform.py) reproduces that exact
+logic in plain Python so it's reviewable and testable. The repo ships a before/after
+sample, generated from a **fixed seed** so the values below are reproducible:
+
+| Field | Raw (`employee_data.csv`) | Protected (`employee_data_secure.csv`) |
+|-------|---------------------------|----------------------------------------|
+| `salary` | `46556` | `xxxxx` |
+| `password` | `JFCrn](l.2ed` | `23b8e6eb…87ee7` (SHA-256) |
+
+```bash
+python transforms/secure_transform.py employee_data.csv employee_data_secure.csv
+python tests/test_secure_transform.py        # unit tests for the transform
+```
+
+## Security notes & honest limitations
+
+This is a **portfolio/reference pipeline on synthetic data**, not a hardened production system — and it's worth being explicit about what that means (a reviewer will ask):
+
+- **Password hashing.** The demo defaults to unsalted SHA-256, which is fast and reversible for weak passwords via rainbow tables. Set a `PII_PEPPER` env var to switch to **HMAC-SHA256** (not reversible without the key). Real credential storage should use a salted, slow KDF — bcrypt / scrypt / Argon2.
+- **Source-stage exposure.** The raw extract writes plaintext PII to disk and to the GCS landing bucket *before* masking. In production that bucket needs restricted IAM, encryption, and lifecycle deletion.
+- **Scope.** Only salary and password are transformed; names / email / phone / address pass through (they're synthetic). A real PII program would tokenize those too.
+- **Scale.** The architecture (Data Fusion + Dataproc) scales horizontally, but this has only been run at 100 synthetic records — it has not been load-tested at 100K+.
 
 ## Tech stack
 
@@ -57,17 +74,37 @@ Python + Faker · Google Cloud Storage · Cloud Data Fusion · BigQuery · Cloud
 
 ```
 dags/employee_secure_daily_pipeline.py   → Airflow DAG (orchestration)
-dags/scripts/extract.py                  → synthetic data generation + GCS upload
-employee_data.csv                        → sample generated output
+dags/scripts/extract.py                  → synthetic data generation (+ optional GCS upload)
+transforms/secure_transform.py           → reference impl of the masking + hashing
+tests/test_secure_transform.py           → unit tests for the transform
+employee_data.csv                        → sample raw output (before protection)
+employee_data_secure.csv                 → sample protected output (after)
+requirements.txt                         → local data-generation deps
 ```
 
-## How to run
+## Run locally (no GCP needed)
 
-1. Provision GCS, a Cloud Data Fusion instance, and a BigQuery dataset in your GCP project.
-2. Build the Data Fusion pipeline (`ETL Data Pipeline`) with the salary-mask and SHA-256 transforms.
-3. Drop `dags/` into your Cloud Composer environment's bucket.
-4. Update the bucket name and pipeline/instance names in the DAG and `extract.py` to match your project.
-5. Enable the `employee_data` DAG — it runs daily and publishes to BigQuery for Tableau.
+```bash
+pip install -r requirements.txt
+python dags/scripts/extract.py        # writes employee_data.csv (uploads only if GCS_BUCKET is set)
+python transforms/secure_transform.py employee_data.csv employee_data_secure.csv
+```
+
+Optional knobs (all read from the environment):
+
+```bash
+export NUM_EMPLOYEES=1000      # change the record count
+export PII_PEPPER=some-secret  # switch password hashing to HMAC-SHA256
+export GCS_BUCKET=your-bucket  # also upload the raw extract to Cloud Storage
+```
+
+## Run the full GCP pipeline
+
+1. Provision GCS, a Cloud Data Fusion instance, and a BigQuery dataset in your project.
+2. Build the Data Fusion pipeline with the salary-mask + SHA-256 transforms.
+3. Deploy `dags/` (including `dags/scripts/`) to your Cloud Composer bucket, and add **`faker`** (and confirm `google-cloud-storage`) to the environment's PyPI packages.
+4. Set the env vars / Airflow Variables: `ALERT_EMAIL`, `GCP_REGION`, `DATAFUSION_INSTANCE`, `DATAFUSION_PIPELINE`, `GCS_BUCKET`.
+5. Enable the `employee_secure_daily_pipeline` DAG — it runs daily and publishes to BigQuery for Tableau.
 
 ## License
 

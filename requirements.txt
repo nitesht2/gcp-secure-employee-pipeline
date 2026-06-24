@@ -1,0 +1,5 @@
+# Local data-generation deps (extract.py + secure_transform.py).
+# Airflow + the Google providers are supplied by your Cloud Composer environment,
+# so they are intentionally not pinned here.
+Faker==25.2.0
+google-cloud-storage==2.16.0
