@@ -6,6 +6,7 @@
 
 **A reference data-engineering pipeline on Google Cloud that demonstrates PII protection.** It generates synthetic employee records, masks salaries and hashes passwords *before* they reach the warehouse, lands the protected result in BigQuery, and serves it through Tableau — orchestrated end-to-end by Airflow on a daily schedule.
 
+[![tests](https://github.com/nitesht2/gcp-secure-employee-pipeline/actions/workflows/tests.yml/badge.svg)](https://github.com/nitesht2/gcp-secure-employee-pipeline/actions/workflows/tests.yml)
 ![GCP](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat&logo=googlecloud&logoColor=white)
 ![BigQuery](https://img.shields.io/badge/BigQuery-669DF6?style=flat&logo=googlebigquery&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-017CEE?style=flat&logo=apacheairflow&logoColor=white)
